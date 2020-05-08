@@ -7,7 +7,8 @@ const type = require('./type')
 const Soup = require("./soup")
 
 // Defines the queries
-module.exports = {
+module.exports = 
+{
     Soups: {
         type: new GraphQLList(type),
         args: {

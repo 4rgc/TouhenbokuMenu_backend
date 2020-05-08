@@ -6,7 +6,8 @@ const type = require('./type')
 const Soup = require('./soup')
 
 // Defines the mutations
-module.exports = {
+module.exports = 
+{
     addSoup: {
         type,
         args: {

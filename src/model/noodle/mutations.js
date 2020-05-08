@@ -6,7 +6,8 @@ const type = require('./type')
 const Noodle = require('./noodle')
 
 //Defines the mutations
-module.exports = {
+module.exports = 
+{
     addNoodle: {
         type,
         args: {

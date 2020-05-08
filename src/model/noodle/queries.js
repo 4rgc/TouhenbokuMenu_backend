@@ -7,7 +7,8 @@ const type = require('./type')
 const Noodle = require('./noodle')
 
 // Defines the queries
-module.exports = {
+module.exports = 
+{
     Noodles: {
         type: new GraphQLList(type),
         args: {
