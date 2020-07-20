@@ -1,12 +1,12 @@
 const mySQLConnector = require('./mysqlConnector')
 const List = require('collections/list')
 
-class mysqlWrapper {
+class MysqlWrapper {
     get connector() {
         return this.internalConnector
     }
     getTransationConnection(index) {
-        return this.transactionConnections[index]
+        return this.transactionConnections.toArray()[index]
     }
 
     constructor(connectorConfig) {
@@ -18,27 +18,14 @@ class mysqlWrapper {
     }
 
     createQuery({query, params}) {
-
         return new Promise((succeed, fail) => {
-            mySQLConnector.pool.getConnection((err, connection) => {
-
-                //If an error was passed getting a connection, fails the promise sending it to the caller
-                if (err) {
-                    return fail(err)
-                }
-
-                //Runs the query
+            this.getConnectionFromPool().then((connection) => {
                 connection.query(query, params, (err, rows) => {
-
-                    //Releases the connection
                     connection.release()
 
-                    //If an error was passed running the query, fails the promise sending it to the caller
-                    if (err) {
+                    if (err) 
                         return fail(err)
-                    }
 
-                    //Fulfills the promise
                     return succeed(rows)
                 })
             })
@@ -68,7 +55,6 @@ class mysqlWrapper {
         })
     }
 
-    ///TODO: refactor this to work with connectionIndices not connections
     createTransactionalQuery({query, params, connectionIndex}) {
         let connection = this.getTransationConnection(connectionIndex)
 
@@ -131,7 +117,7 @@ class mysqlWrapper {
     getConnectionFromPool() {
         return new Promise((succeed, fail) => {
 
-            connector.pool.getConnection((err, connection) => {
+            this.connector.pool.getConnection((err, connection) => {
 
                 //Fails the promise if a connection cannot be retrieved
                 if (err) {
@@ -145,4 +131,4 @@ class mysqlWrapper {
     }
 }
 
-module.exports = mysqlWrapper
+module.exports = MysqlWrapper
