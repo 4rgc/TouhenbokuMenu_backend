@@ -1,0 +1,5 @@
+describe('mysqlWrapper', () => {
+    describe('#createQuery()', () => {
+
+    })
+})

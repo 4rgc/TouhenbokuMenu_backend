@@ -1,17 +1,23 @@
 const mySQLConnector = require('./mysqlConnector')
+const List = require('collections/list')
 
-module.exports = class MySQLWrapper {
-    
-    /**
-     * 
-     * 
-     * Queries the database
-     * @param {String} query - The query itself
-     * @param {Array} params - The parameters to be passed to MySQL
-     * @returns {Promise} - A promise to a query result
-     * 
-     */
-    static createQuery({query, params}) {
+class mysqlWrapper {
+    get connector() {
+        return this.internalConnector
+    }
+    getTransationConnection(index) {
+        return this.transactionConnections[index]
+    }
+
+    constructor(connectorConfig) {
+        this.transactionConnections = new List()
+        if(connectorConfig)
+            this.internalConnector = new mySQLConnector(connectorConfig)
+        else
+            this.internalConnector = new mySQLConnector()
+    }
+
+    createQuery({query, params}) {
 
         return new Promise((succeed, fail) => {
             mySQLConnector.pool.getConnection((err, connection) => {
@@ -39,18 +45,33 @@ module.exports = class MySQLWrapper {
         })
     }
 
-    /**
-     * 
-     * 
-     * Runs a transactional query
-     * @param {MySQL.Connection} connection - The connection whose transaction will be used
-     * @param {String} query - The query itself
-     * @param {Array} params - The parameters to be passed to MySQL
-     * @returns {Promise} - A promise to a query result
-     * 
-     */
-    static createTransactionalQuery({query, params, connection}) {
-        
+    beginTransaction() {
+        let index = this.transactionConnections.push(this.getConnectionFromPool())
+        return new Promise((succeed, fail) => {
+
+            transactionConnections[index].then(
+            (connection) => {
+                    connection.beginTransaction(err => {
+
+                    //Fails the promise if the transaction cannot be opened
+                    if (err) {
+                        return fail(err)
+                    }
+
+                    //Fulfills the promise
+                    return succeed(index)
+                })
+            },
+            (err) => {
+                fail(err)
+            })
+        })
+    }
+
+    ///TODO: refactor this to work with connectionIndices not connections
+    createTransactionalQuery({query, params, connectionIndex}) {
+        let connection = this.getTransationConnection(connectionIndex)
+
         return new Promise((succeed, fail) => {
 
             connection.query(query, params, (err, rows) => {
@@ -65,39 +86,9 @@ module.exports = class MySQLWrapper {
             })
         })
     }
-    
-    /**
-     * 
-     * 
-     * Rollbacks a transaction
-     * @param {MySQL.Connection} connection - The connection whose transaction will be rollbacked
-     * @returns {Promise} - A promise to the rollback
-     * 
-     */
-    static rollback(connection) {
 
-        return new Promise((succeed, fail) => {
-
-            try {
-                connection.rollback(() => succeed())
-            } catch (e) {
-                return fail(e)
-            } finally {
-                connection.release()
-            }
-
-        })
-    }
-
-    /**
-     * 
-     * 
-     * Commits a transaction
-     * @param {MySQL.Connection} connection - The connection whose transaction will be commited
-     * @returns {Promise} - A promise to the commit
-     * 
-     */
-    static commit(connection) {
+    commit(connectionIndex) {
+        let connection = this.getTransationConnection(connectionIndex)
 
         return new Promise((succeed, fail) => {
 
@@ -113,23 +104,34 @@ module.exports = class MySQLWrapper {
                 return fail(e)
             } finally {
                 connection.release()
+                this.transactionConnections.delete(connectionIndex)
             }
 
         })
 
     }
 
-    /**
-     * 
-     * 
-     * Retrieves a connection from the pool to be used in transactions
-     * @param {MySQL.Connection} connection - A connection from the pool
-     * 
-     */
-    static getConnectionFromPool() {
+    rollback(connectionIndex) {
+        let connection = this.getTransationConnection(connectionIndex)
+
         return new Promise((succeed, fail) => {
 
-            mySQLConnector.pool.getConnection((err, connection) => {
+            try {
+                connection.rollback(() => succeed())
+            } catch (e) {
+                return fail(e)
+            } finally {
+                connection.release()
+                this.transactionConnections.delete(connectionIndex)
+            }
+
+        })
+    }
+
+    getConnectionFromPool() {
+        return new Promise((succeed, fail) => {
+
+            connector.pool.getConnection((err, connection) => {
 
                 //Fails the promise if a connection cannot be retrieved
                 if (err) {
@@ -141,27 +143,6 @@ module.exports = class MySQLWrapper {
             })
         })
     }
-
-    /**
-     * 
-     * 
-     * Begins a new transaction in a connection
-     * @param {MySQL.Connection} connection - A connection from the pool
-     * 
-     */
-    static beginTransaction(connection) {
-        return new Promise((succeed, fail) => {
-
-            connection.beginTransaction(err => {
-
-                //Fails the promise if the transaction cannot be opened
-                if (err) {
-                    return fail(err)
-                }
-
-                //Fulfills the promise
-                return succeed(connection)
-            })
-        })
-    }
 }
+
+module.exports = mysqlWrapper

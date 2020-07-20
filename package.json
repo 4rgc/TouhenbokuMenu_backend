@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "description": "Backend API for the TouhenbokuMenu app.",
   "main": "serve.js",
+  "directories": {
+    "test": "test"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha --recursive"
   },
   "repository": {
     "type": "git",
@@ -18,9 +21,14 @@
   "homepage": "https://github.com/4rgc/TouhenbokuMenu_backend#readme",
   "dependencies": {
     "axios": "^0.19.2",
+    "collections": "^5.1.11",
     "express": "^4.17.1",
     "express-graphql": "^0.9.0",
+    "fetchql": "^3.0.0",
     "graphql": "^15.0.0",
-    "mysql": "^2.18.1"
+    "graphql-query-builder": "^1.0.7",
+    "mocha": "^8.0.1",
+    "mysql": "^2.18.1",
+    "node-fetch": "^2.6.0"
   }
 }
