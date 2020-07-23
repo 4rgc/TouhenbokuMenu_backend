@@ -1,8 +1,9 @@
 const Pool = require('mysql/lib/Pool')
 const fakePoolConnection = require('./fakePoolConnection')
+const { FakeError } = require('../error/error')
 
 class FakePool extends Pool {
-    constructor() {
+    constructor(faulty = false) {
         super(
             {
                 config: {
@@ -15,9 +16,22 @@ class FakePool extends Pool {
                     connectionConfig: {}
                 }
             })
+        this._faulty = faulty
     }
+    
+    get faulty() {
+        return this._faulty
+    }
+
+    set faulty(value) {
+        this._faulty = value
+    }
+
     getConnection(callback) {
-        callback(null, new fakePoolConnection())
+        if(!this._faulty) 
+            callback(null, new fakePoolConnection(this._faulty))
+        else
+            callback(new FakeError())
     }
 }
 
