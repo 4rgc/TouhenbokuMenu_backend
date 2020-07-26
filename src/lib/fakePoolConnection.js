@@ -3,9 +3,10 @@ const Connection = require('mysql/lib/Connection')
 const { FakeError } = require('../error/error')
 
 class FakePoolConnection extends PoolConnection{
-    constructor(faulty = false) {
+    constructor(pool, faulty = false) {
         super({}, {config: {}})
         this._faulty = faulty
+        this.pool = pool
     }
 
     get faulty() {
@@ -24,7 +25,7 @@ class FakePoolConnection extends PoolConnection{
     }
 
     release() {
-        this.released = true
+        this.pool.releaseConnection(this)
     }
 
     beginTransaction(options, callback) {

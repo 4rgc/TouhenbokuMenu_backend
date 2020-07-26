@@ -1,7 +1,14 @@
-const mysql = require('./mysqlWrapper')
+const { mysqlWrapperInstance } = require('./mysqlWrapper')
 const { sqlConstants } = require('../util/sqlConstants')
 
 class DAO {
+    static get mysqlWrapper() {
+        return this.internalMysqlWrapper
+    }
+
+    static set mysqlWrapper(instance) {
+        this.internalMysqlWrapper = instance;
+    }
 
     /**
      * This property can be overriden when the ID column is differet from 'id'
@@ -15,7 +22,7 @@ class DAO {
      * @param {Number} id - The entry ID
      */
     static async find(id) {
-        return (await mysql.createQuery({
+        return (await mysqlWrapperInstance.createQuery({
             query: `SELECT * FROM ?? WHERE ?? = ? LIMIT 1;`,
             params: [this.TABLE_NAME, this.PRIMARY_KEY, id]
         })).shift()
@@ -25,7 +32,7 @@ class DAO {
      * Retrieves all entries on the extending class' table
      */
     static findAll() {
-        return mysql.createQuery({
+        return mysqlWrapperInstance.createQuery({
             query: `SELECT * FROM ??;`,
             params: [this.TABLE_NAME]
         });
@@ -60,7 +67,7 @@ class DAO {
             params.push(limit)
         }
 
-        return mysql.createQuery({
+        return mysqlWrapperInstance.createQuery({
             query: baseQuery,
             params
         })
@@ -73,7 +80,7 @@ class DAO {
      * @param {Number} id - The ID of the entry to be updated
      */
     static update(connection, {data, id}) {
-        return mysql.createTransactionalQuery({
+        return mysqlWrapperInstance.createTransactionalQuery({
             query: `UPDATE ??
                     SET ?
                     WHERE ?? = ?;`,
@@ -88,7 +95,7 @@ class DAO {
      * @param {Object} data - The fields which will populate the new entry
      */
     static insert(connection, {data}) {
-        return mysql.createTransactionalQuery({
+        return mysqlWrapperInstance.createTransactionalQuery({
             query: `INSERT INTO ${this.TABLE_NAME}
                     SET ?;`,
             params: [data],
@@ -102,7 +109,7 @@ class DAO {
      * @param {Number} id - The ID of the entry to be deleted
      */
     static delete(connection, {id}) {
-        return mysql.createTransactionalQuery({
+        return mysqlWrapperInstance.createTransactionalQuery({
             query: `DELETE FROM  ??
                     WHERE ?? = ?;`,
             params: [this.TABLE_NAME,this.PRIMARY_KEY, id],
@@ -110,5 +117,7 @@ class DAO {
         })
     }
 }
+
+DAO.mysqlWrapper = mysqlWrapperInstance
 
 module.exports = DAO

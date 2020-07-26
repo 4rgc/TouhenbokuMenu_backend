@@ -1,24 +1,20 @@
 const { mysqlWrapper } = require('../../src/lib/mysqlWrapper')
-const { mysqlConnectorConfig } = require('../../src/lib/mysqlConnectorConfig')
-const mysql = require('mysql')
+const { environmentConfig } = require('../../src/lib/mysqlConnectorConfig')
 const assert = require('assert')
+const mysql = require('mysql')
 
 
-describe('mysqlWrapper Integration !!INTERNET!!', () => {
+describe.skip('mysqlWrapper Integration !!INTERNET!!', () => {
     before(() => {
-        this.config = new mysqlConnectorConfig()
-        this.config.hostAddress = 'sql3.freemysqlhosting.net'
-        this.config.userName = 'sql3355462'
-        this.config.databaseName = 'sql3355462'
-        this.config.password = 'zU2DKRQXyK'
-        this.config.poolConnectionLimit = 10
-        this.config.waitForConnections = true
+        this.config = environmentConfig
     })
 
     beforeEach(() => {
-        this.wrapper = new mysqlWrapper(this.config)
+        this.wrapper = new mysqlWrapper()
+        this.wrapper.connector.initializeInternalPool(this.config)
+        //console.log(this.wrapper.connector.pool)
         this.onRejected = (err) => {
-            throw new Error(err)
+            throw new Error(err /*+ '\n' + err.stack*/)
         }
     })
     after((done) => {
@@ -32,9 +28,9 @@ describe('mysqlWrapper Integration !!INTERNET!!', () => {
         it('should return 1 line', (done) => {
             this.wrapper.createQuery({
                 query: 'SELECT * FROM ?? WHERE ?? = ? LIMIT 1',
-                params: ['Soups', 'id', 1]
+                params: ['Soups', 'SoupId', 1]
             }).then((res) => {
-                assert.strictEqual(res.shift().name, 'Bruh')
+                assert.strictEqual(res.shift().SoupName, 'Pork')
                 done()
             }).catch(this.onRejected)
         })

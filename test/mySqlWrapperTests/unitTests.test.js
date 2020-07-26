@@ -11,10 +11,67 @@ describe('mysqlWrapper Unit', () => {
         }
         this.wrapper = new mysqlWrapper()
     })
+    
+    describe('#createQuery()', () => {
+        it('should return "test"', (done) => {
+            this.wrapper.internalConnector.internalPool = new fakePool()
+            this.wrapper.createQuery({
+                query: 'test', 
+                params: []
+            }).then((res) => {
+                assert.strictEqual(res, 'test')
+                done()
+            },
+            this.onRejected
+            )
+        })
+        it('should return "bruh"', (done) => {
+            this.wrapper.internalConnector.internalPool = new fakePool()
+            this.wrapper.createQuery({
+                query: 'bruh', 
+                params: []
+            }).then((res) => {
+                assert.strictEqual(res, 'bruh')
+                done()
+            },
+            this.onRejected
+            )
+        })
+        it('should release the connection', (done) => {
+            this.wrapper.internalConnector.internalPool = new fakePool()
+
+            this.wrapper.internalConnector.internalPool.on('release', 
+            (connection) => {
+                done()
+            })
+            this.wrapper.createQuery({
+                query: 'test',
+                params: []
+            }).catch(this.onRejected)
+            
+        })
+
+        it('should fake reject', (done) => {
+            this.wrapper.internalConnector.internalPool = new fakePool(true)
+            this.wrapper.createQuery({query: 'bruh', params: ''}).then((res) => {
+                throw new Error('resolved')
+            }, 
+            (err) => {
+                if(!(err instanceof FakeError)) {
+                    throw err
+                }
+                done()
+            })
+        })
+    })
+
     describe('#getTransactionConnection()', () => {
         it('should return a FakePoolConnection', () => {
             this.wrapper.transactionConnections.push(new fakePoolConnection())
-            assert.strictEqual(this.wrapper.getTransationConnection(0).constructor.name, 'FakePoolConnection')
+            assert.strictEqual(
+                this.wrapper.getTransationConnection(0).constructor.name, 
+                fakePoolConnection.name
+                )
         })
         it('should throw NoSuchTransactionError()', () => {
             let error
@@ -29,38 +86,7 @@ describe('mysqlWrapper Unit', () => {
             }
         })
     })
-    describe('#createQuery()', () => {
-        it('should return "test"', (done) => {
-            this.wrapper.internalConnector.internalPool = new fakePool()
-            this.wrapper.createQuery({query: 'test', params: 'test'}).then((res) => {
-                assert.strictEqual(res, 'test')
-                done()
-            },
-            this.onRejected
-            )
-        })
-        it('should return "bruh"', (done) => {
-            this.wrapper.internalConnector.internalPool = new fakePool()
-            this.wrapper.createQuery({query: 'bruh', params: 'test'}).then((res) => {
-                assert.strictEqual(res, 'bruh')
-                done()
-            },
-            this.onRejected
-            )
-        })
-        it('should fake reject', (done) => {
-            this.wrapper.internalConnector.internalPool = new fakePool(true)
-            this.wrapper.createQuery({query: 'bruh', params: ''}).then((res) => {
-                throw new Error('resolved')
-            }, 
-            (err) => {
-                if(!(err instanceof FakeError)) {
-                    throw err
-                }
-                done()
-            })
-        })
-    })
+
     describe('#beginTransaction()', () => {
         it('should return 0', (done) => {
             this.wrapper.internalConnector.internalPool = new fakePool()
@@ -93,67 +119,35 @@ describe('mysqlWrapper Unit', () => {
             })
         })
     })
-    describe('#commit()', () => {
-        it('should commit and remove the connection', (done) => {
-            this.wrapper.transactionConnections.push(new fakePoolConnection())
-            this.wrapper.commit(0).then(() => {
-                assert.strictEqual(this.wrapper.transactionConnections[0], undefined)
+
+    describe('#createTransactionalQuery()', () => {
+        it('should return "test"', (done) => {
+            this.wrapper.transactionConnections[0] = new fakePoolConnection()
+            this.wrapper.createTransactionalQuery({
+                query: 'test',
+                params: [],
+                transactionId: 0
+            }).then((res) => {
+                assert.strictEqual(res, 'test')
                 done()
-            },
-            this.onRejected)
+            }).catch(this.onRejected)
         })
-        it('should commit and remove the connection', (done) => {
-            this.wrapper.transactionConnections = [new fakePoolConnection(), new fakePoolConnection()]
-            this.wrapper.commit(0).then(() => {
-                assert.strictEqual(this.wrapper.transactionConnections[0], undefined)
-                done()
-            },
-            this.onRejected)
-        })
-        it('should fake reject', (done) => {
-            this.wrapper.transactionConnections.push(new fakePoolConnection(true))
-            this.wrapper.commit(0).then(() => {
-                throw new Error('resolved')
-            }).catch(
-            (err) => {
-                console.log('entered fail')
-                assert.strictEqual(this.wrapper.transactionConnections[0], undefined)
-                if(!(err instanceof FakeError))
-                    throw err
-                done()
+        it('should leave the connection unreleased', (done) => {
+            this.wrapper.internalConnector.internalPool = new fakePool()
+            this.wrapper.transactionConnections[0] = new fakePoolConnection(this.wrapper.connector.pool)
+            this.wrapper.internalConnector.internalPool.on('release', () => {
+                throw new Error('connection released')
             })
+            this.wrapper.createTransactionalQuery({
+                query: 'test',
+                params: [],
+                transactionId: 0
+            }).then((res) => {
+                done()
+            }).catch(this.onRejected)
         })
     })
-    describe('#rollback()', () => {
-        it('should rollback and commit the connection', (done) => {
-            this.wrapper.transactionConnections.push(new fakePoolConnection())
-            this.wrapper.rollback(0).then(() => {
-                assert.strictEqual(this.wrapper.transactionConnections[0], undefined)
-                done()
-            },
-            this.onRejected)
-        })
-        it('should rollback and commit the connection', (done) => {
-            this.wrapper.transactionConnections = [new fakePoolConnection(), new fakePoolConnection(), new fakePoolConnection()]
-            this.wrapper.rollback(1).then(() => {
-                assert.strictEqual(this.wrapper.transactionConnections[1], undefined)
-                done()
-            },
-            this.onRejected)
-        })
-        it('should fake reject', (done) => {
-            this.wrapper.transactionConnections.push(new fakePoolConnection(true))
-            this.wrapper.rollback(0).then(() => {
-                throw new Error('resolved')
-            },
-            (err) => {
-                if(!(err instanceof FakeError))
-                    throw err
-                assert.strictEqual(this.wrapper.transactionConnections[0], undefined)
-                done()
-            })
-        })
-    })
+
     describe('#getConnectionFromPool()', () => {
         it('should return a connection', (done) => {
             this.wrapper.connector.internalPool = new fakePool()
@@ -173,5 +167,92 @@ describe('mysqlWrapper Unit', () => {
             })
         })
     })
-    
+
+    describe('#commit()', () => {
+        it('should commit and remove the connection', (done) => {
+            this.wrapper.transactionConnections.push(new fakePoolConnection(new fakePool()))
+            this.wrapper.commit(0).then(() => {
+                assert.strictEqual(this.wrapper.transactionConnections[0], undefined)
+                done()
+            },
+            this.onRejected)
+        })
+        it('should commit and remove the connection', (done) => {
+            this.wrapper.transactionConnections = [new fakePoolConnection(new fakePool()), new fakePoolConnection(new fakePool())]
+            this.wrapper.commit(0).then(() => {
+                assert.strictEqual(this.wrapper.transactionConnections[0], undefined)
+                done()
+            },
+            this.onRejected)
+        })
+        it('should release the connection', (done) => {
+            this.wrapper.internalConnector.internalPool = new fakePool()
+            this.wrapper.transactionConnections.push(
+                new fakePoolConnection(this.wrapper.internalConnector.internalPool)
+                )
+            this.wrapper.internalConnector.internalPool.on('release', (connection) => {
+                done()
+            })
+            this.wrapper.commit(0).then(() => {
+            },
+            this.onRejected)
+        })
+        it('should release the connection', (done) => {
+            this.wrapper.internalConnector.internalPool = new fakePool()
+            this.wrapper.transactionConnections.push(
+                new fakePoolConnection(this.wrapper.internalConnector.internalPool, true)
+                )
+            this.wrapper.internalConnector.internalPool.on('release', (connection) => {
+                done()
+            })
+            this.wrapper.commit(0).catch(
+            (err) => {
+                if(!(err instanceof FakeError))
+                    throw err
+            })
+        })
+        it('should fake reject', (done) => {
+            this.wrapper.transactionConnections.push(new fakePoolConnection(new fakePool(),true))
+            this.wrapper.commit(0).then(() => {
+                throw new Error('resolved')
+            }).catch(
+            (err) => {
+                assert.strictEqual(this.wrapper.transactionConnections[0], undefined)
+                if(!(err instanceof FakeError))
+                    throw err
+                done()
+            })
+        })
+    })
+
+    describe('#rollback()', () => {
+        it('should rollback and commit the connection', (done) => {
+            this.wrapper.transactionConnections.push(new fakePoolConnection(new fakePool()))
+            this.wrapper.rollback(0).then(() => {
+                assert.strictEqual(this.wrapper.transactionConnections[0], undefined)
+                done()
+            },
+            this.onRejected)
+        })
+        it('should rollback and commit the connection', (done) => {
+            this.wrapper.transactionConnections = [new fakePoolConnection(new fakePool()), new fakePoolConnection(new fakePool()), new fakePoolConnection(new fakePool())]
+            this.wrapper.rollback(1).then(() => {
+                assert.strictEqual(this.wrapper.transactionConnections[1], undefined)
+                done()
+            },
+            this.onRejected)
+        })
+        it('should fake reject', (done) => {
+            this.wrapper.transactionConnections.push(new fakePoolConnection(new fakePool(), true))
+            this.wrapper.rollback(0).then(() => {
+                throw new Error('resolved')
+            },
+            (err) => {
+                if(!(err instanceof FakeError))
+                    throw err
+                assert.strictEqual(this.wrapper.transactionConnections[0], undefined)
+                done()
+            })
+        })
+    })
 })

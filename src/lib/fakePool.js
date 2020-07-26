@@ -29,9 +29,17 @@ class FakePool extends Pool {
 
     getConnection(callback) {
         if(!this._faulty) 
-            callback(null, new fakePoolConnection(this._faulty))
+            callback(null, new fakePoolConnection(this, this._faulty))
         else
             callback(new FakeError())
+        this.emit('acquire')
+    }
+
+    releaseConnection(connection) {
+        if(this._freeConnections.includes(connection))
+            return;
+        this._freeConnections.push(connection)
+        this.emit('release')
     }
 }
 

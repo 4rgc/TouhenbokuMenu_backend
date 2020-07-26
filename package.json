@@ -7,7 +7,7 @@
     "test": "test"
   },
   "scripts": {
-    "test": "mocha --recursive"
+    "test": "env STAGE=development MYSQL_DB_PASSWORD=7g6N?R5t MYSQL_DB_USER=apiuser MYSQL_DB_NAME=touhenboku_menu_db MYSQL_DB_ADDRESS=andriibohdan.coxounsjxrqz.us-east-2.rds.amazonaws.com PORT=8080 mocha --recursive"
   },
   "repository": {
     "type": "git",
@@ -21,11 +21,10 @@
   "homepage": "https://github.com/4rgc/TouhenbokuMenu_backend#readme",
   "dependencies": {
     "axios": "^0.19.2",
-    "collections": "^5.1.11",
     "express": "^4.17.1",
     "express-graphql": "^0.9.0",
     "fetchql": "^3.0.0",
-    "graphql": "^15.0.0",
+    "graphql": "^15.3.0",
     "graphql-query-builder": "^1.0.7",
     "mocha": "^8.0.1",
     "mysql": "^2.18.1",

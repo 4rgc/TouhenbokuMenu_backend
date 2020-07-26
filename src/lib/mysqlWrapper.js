@@ -1,35 +1,8 @@
 const mySQLConnector = require('./mysqlConnector')
 const mysqlConnectorConfig = require('./mysqlConnectorConfig')
-const List = require('collections/list')
 const { NoSuchTransactionError } = require('../error/error')
 
-const Connection = require('mysql/lib/Connection')
-
 class MysqlWrapper {
-    get connector() {
-        return this.internalConnector
-    }
-
-    addTransactionConnection(connection) {
-        let newId = this.transactionConnections.length
-        this.transactionConnections[newId] = connection
-        return newId
-    }
-
-    getTransationConnection(id) {
-        let connection = this.transactionConnections[id]
-        if(connection)
-            return connection
-        else {
-            console.log(this.transactionConnections[id])
-            throw new NoSuchTransactionError(id)
-        }
-    }
-
-    removeTransactionConnection(id) {
-        this.transactionConnections[id] = undefined
-    }
-
     constructor(connectorConfig) {
         this.transactionConnections = []
         if(connectorConfig)
@@ -55,6 +28,19 @@ class MysqlWrapper {
         })
     }
 
+    get connector() {
+        return this.internalConnector
+    }
+
+    getTransationConnection(id) {
+        let connection = this.transactionConnections[id]
+        if(connection)
+            return connection
+        else {
+            throw new NoSuchTransactionError(id)
+        }
+    }
+
     beginTransaction() {
         return new Promise((succeed, fail) => {
             this.getConnectionFromPool().then((connection) => {
@@ -73,6 +59,12 @@ class MysqlWrapper {
         })
     }
 
+    addTransactionConnection(connection) {
+        let newId = this.transactionConnections.length
+        this.transactionConnections[newId] = connection
+        return newId
+    }
+
     createTransactionalQuery({query, params, transactionId}) {
         let connection = this.getTransationConnection(transactionId)
 
@@ -89,11 +81,22 @@ class MysqlWrapper {
         })
     }
 
-    commit(transactionId) {
-        let connection = this.getTransationConnection(transactionId)
-
+    getConnectionFromPool() {
         return new Promise((succeed, fail) => {
 
+            this.connector.pool.getConnection((err, connection) => {
+
+                if (err) {
+                    return fail(err)
+                }
+                return succeed(connection)
+            })
+        })
+    }
+
+    commit(transactionId) {
+        return new Promise((succeed, fail) => {
+            let connection = this.getTransationConnection(transactionId)
             try {
                 connection.commit(err => { 
                     if (err) {
@@ -118,8 +121,6 @@ class MysqlWrapper {
     }
 
     rollback(transactionId) {
-        
-
         return new Promise((succeed, fail) => {
             let connection = this.getTransationConnection(transactionId)
             try {
@@ -134,17 +135,8 @@ class MysqlWrapper {
         })
     }
 
-    getConnectionFromPool() {
-        return new Promise((succeed, fail) => {
-
-            this.connector.pool.getConnection((err, connection) => {
-
-                if (err) {
-                    return fail(err)
-                }
-                return succeed(connection)
-            })
-        })
+    removeTransactionConnection(id) {
+        this.transactionConnections[id] = undefined
     }
 }
 
