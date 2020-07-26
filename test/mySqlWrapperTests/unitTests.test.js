@@ -19,7 +19,7 @@ describe('mysqlWrapper Unit', () => {
                 query: 'test', 
                 params: []
             }).then((res) => {
-                assert.strictEqual(res, 'test')
+                assert.strictEqual(res.shift(), 'test')
                 done()
             },
             this.onRejected
@@ -31,7 +31,7 @@ describe('mysqlWrapper Unit', () => {
                 query: 'bruh', 
                 params: []
             }).then((res) => {
-                assert.strictEqual(res, 'bruh')
+                assert.strictEqual(res.shift(), 'bruh')
                 done()
             },
             this.onRejected
@@ -128,7 +128,7 @@ describe('mysqlWrapper Unit', () => {
                 params: [],
                 transactionId: 0
             }).then((res) => {
-                assert.strictEqual(res, 'test')
+                assert.strictEqual(res.shift(), 'test')
                 done()
             }).catch(this.onRejected)
         })

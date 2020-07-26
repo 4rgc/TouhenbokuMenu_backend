@@ -19,9 +19,9 @@ class FakePoolConnection extends PoolConnection{
 
     query(query, params, callback) {
         if(this._faulty)
-            callback(new FakeError(), query)
+            callback(new FakeError(), [query])
         else
-            callback(undefined, query)
+            callback(undefined, [query])
     }
 
     release() {

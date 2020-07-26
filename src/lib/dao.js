@@ -1,5 +1,5 @@
 const { mysqlWrapperInstance } = require('./mysqlWrapper')
-const { sqlConstants } = require('../util/sqlConstants')
+const sqlConstants = require('../util/sqlConstants')
 
 class DAO {
     static get mysqlWrapper() {
@@ -10,29 +10,21 @@ class DAO {
         this.internalMysqlWrapper = instance;
     }
 
-    /**
-     * This property can be overriden when the ID column is differet from 'id'
-     */
     static get PRIMARY_KEY() {
         return "id"
     }
 
-    /**
-     * Retrieves a single entry matching the passed ID
-     * @param {Number} id - The entry ID
-     */
-    static async find(id) {
-        return (await mysqlWrapperInstance.createQuery({
+    static find(id) {
+        return this.mysqlWrapper.createQuery({
             query: `SELECT * FROM ?? WHERE ?? = ? LIMIT 1;`,
             params: [this.TABLE_NAME, this.PRIMARY_KEY, id]
-        })).shift()
+        }).then(res => {
+            return res.shift()
+        })
     }
 
-    /**
-     * Retrieves all entries on the extending class' table
-     */
     static findAll() {
-        return mysqlWrapperInstance.createQuery({
+        return this.mysqlWrapper.createQuery({
             query: `SELECT * FROM ??;`,
             params: [this.TABLE_NAME]
         });
@@ -67,7 +59,7 @@ class DAO {
             params.push(limit)
         }
 
-        return mysqlWrapperInstance.createQuery({
+        return this.mysqlWrapper.createQuery({
             query: baseQuery,
             params
         })
@@ -80,12 +72,24 @@ class DAO {
      * @param {Number} id - The ID of the entry to be updated
      */
     static update(connection, {data, id}) {
-        return mysqlWrapperInstance.createTransactionalQuery({
-            query: `UPDATE ??
-                    SET ?
-                    WHERE ?? = ?;`,
-            params: [this.TABLE_NAME, data, this.PRIMARY_KEY, id],
-            connection
+        let transactionId = -1
+        return this.mysqlWrapper.beginTransaction().then(
+            Id => {
+                transactionId = Id
+                return this.mysqlWrapper.createTransactionalQuery({
+                query: 
+`UPDATE ??
+SET ?
+WHERE ?? = ?;`,
+                params: [this.TABLE_NAME, data, this.PRIMARY_KEY, id],
+                transactionId: Id
+            })
+        }).then(res => {
+            return this.mysqlWrapper.commit(transactionId).then(
+                () => {
+                    return res
+                }
+            )
         })
     }
 
@@ -95,11 +99,23 @@ class DAO {
      * @param {Object} data - The fields which will populate the new entry
      */
     static insert(connection, {data}) {
-        return mysqlWrapperInstance.createTransactionalQuery({
-            query: `INSERT INTO ${this.TABLE_NAME}
-                    SET ?;`,
-            params: [data],
-            connection
+        let transactionId = -1
+        return this.mysqlWrapper.beginTransaction().then(
+            Id => {
+                transactionId = Id
+                return this.mysqlWrapper.createTransactionalQuery({
+                query: 
+`INSERT INTO ${this.TABLE_NAME}
+SET ?;`,
+                params: [data],
+                transactionId: Id
+            })
+        }).then(res => {
+            return this.mysqlWrapper.commit(transactionId).then(
+                () => {
+                    return res
+                }
+            )
         })
     }
 
@@ -109,11 +125,23 @@ class DAO {
      * @param {Number} id - The ID of the entry to be deleted
      */
     static delete(connection, {id}) {
-        return mysqlWrapperInstance.createTransactionalQuery({
-            query: `DELETE FROM  ??
-                    WHERE ?? = ?;`,
-            params: [this.TABLE_NAME,this.PRIMARY_KEY, id],
-            connection
+        let transactionId = -1
+        return this.mysqlWrapper.beginTransaction().then(
+            Id => {
+                transactionId = Id
+                return this.mysqlWrapper.createTransactionalQuery({
+                query: 
+`DELETE FROM  ??
+WHERE ?? = ?;`,
+                params: [this.TABLE_NAME,this.PRIMARY_KEY, id],
+                transactionId: Id
+            })
+        }).then(res => {
+            return this.mysqlWrapper.commit(transactionId).then(
+                () => {
+                    return res
+                }
+            )
         })
     }
 }
