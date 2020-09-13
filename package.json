@@ -28,6 +28,6 @@
     "graphql-query-builder": "^1.0.7",
     "mocha": "^8.0.1",
     "mysql": "^2.18.1",
-    "node-fetch": "^2.6.0"
+    "node-fetch": "^2.6.1"
   }
 }
